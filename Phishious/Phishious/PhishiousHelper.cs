@@ -8,7 +8,7 @@ namespace Phishious.Phishious
 {
     public class PhishiousHelper
     {
-        private List<string> FilterIdentificationWords = new List<string>(new string[] { "IronPort", "E=Sophos", "E=McAfee", "PerlMx", "Trustwave SEG", "Trustwave MailMarshal", "Exchange", "Microsoft SMTP Server", "Proofpoint-Spam", "X-FireEye", "Forcepoint", "google", "X-TMASE-Result", "trendmicro", "Diagnostic information for administrators", "Proofpoint-Virus", "CrossPremisesHeaders", "SYMC-ESS-Spam", "Exchange-CrossPremises", "MS-Office365", "X-Forefront-Antispam-Report:", "Postfix", "X-VirusChecked", "X-StarScan", "FireEye ETP", "FE-ETP", "X-FE-ETP-METADATA", "Mimecast-Spam", "X-Mimecast-Impersonation-Protect", "protection.outlook.com", "X-MailControl", "X-MailControl-Inbound", "x-msw-jemd-malware", "x-msw-jemd-refid", "X-SEA-Spam", "X-Barracuda-Spam-Score" });
+        private List<string> FilterIdentificationWords = new List<string>(new string[] { "IronPort", "E=Sophos", "E=McAfee", "PerlMx", "Trustwave SEG", "Trustwave MailMarshal", "Exchange", "Microsoft SMTP Server", "Proofpoint-Spam", "X-FireEye", "Forcepoint", "google", "X-TMASE-Result", "trendmicro", "Diagnostic information for administrators", "Proofpoint-Virus", "CrossPremisesHeaders", "SYMC-ESS-Spam", "Exchange-CrossPremises", "MS-Office365", "X-Forefront-Antispam-Report:", "Postfix", "X-VirusChecked", "X-StarScan", "FireEye ETP", "FE-ETP", "X-FE-ETP-METADATA", "Mimecast-Spam", "X-Mimecast-Impersonation-Protect", "protection.outlook.com", "X-MailControl", "X-MailControl-Inbound", "x-msw-jemd-malware", "x-msw-jemd-refid", "X-SEA-Spam", "X-Barracuda-Spam-Score", "X-Agari-Trust-Score" });
 
         public List<PhishiousResult> FilterIdentification(string fileText, string fileName, bool detonate)
         {
@@ -62,12 +62,40 @@ namespace Phishious.Phishious
             int trendmicro = 0;
             int forcepoint = 0;
             int clearswift = 0;
+            float agari = 0;
             if (matchedKeyWords != null)
             {
                 foreach (string rawSupply in matchedKeyWords)
                 {
                     switch (rawSupply)
                     {
+                        case "X-Agari-Trust-Score":
+                            if (detonate)
+                            {
+                                string fStatus = "Secure";
+                                List<PhishiousTextAnalysed> textAnalysedList = new List<PhishiousTextAnalysed>();
+                                string matchedKeyword = rawSupply;
+                                if (fileText.Contains("X-Agari-Trust-Score"))
+                                {
+                                    agari = float.Parse(fileText.Split(new string[] { "Score: " }, StringSplitOptions.None)[1].Split('\n')[0].Trim());
+                                    string agariTrust = $"Agari Trust Score: {agari}";
+                                    if (agari > 3.0)
+                                    {
+                                        textAnalysedList.Add(new PhishiousTextAnalysed() { TextAnalysed = agariTrust, Description = "An Agari Trust Score of 3 or greater will not be marked as spam." });
+                                        fStatus = "Vulnerable";
+                                    }
+                                    else
+                                    {
+                                        textAnalysedList.Add(new PhishiousTextAnalysed() { TextAnalysed = agariTrust, Description = "An Agari Trust Score of less than 3 will be marked as spam." });
+                                    }
+                                parsedSupplies.Add(new PhishiousResult() { KeywordMatch = matchedKeyword, Filter = "X-Agari-Trust-Score", Status = fStatus, TextAnalysed = textAnalysedList });
+                                }
+                            }
+                            else
+                            {
+                                parsedSupplies.Add(new PhishiousResult() { KeywordMatch = rawSupply, Filter = "Agari", Status = "Priming" });
+                            }
+                            break;
                         case "IronPort":
                             if (detonate)
                             {
